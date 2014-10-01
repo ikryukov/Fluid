@@ -8,6 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		72791AE519DC87580082772A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 72791AE419DC87580082772A /* main.cpp */; };
+		72791AED19DC96750082772A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AEC19DC96740082772A /* Cocoa.framework */; };
+		72791AEF19DC96810082772A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AEE19DC96810082772A /* OpenGL.framework */; };
+		72791AF119DC968C0082772A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF019DC968C0082772A /* IOKit.framework */; };
+		72791AF319DC96960082772A /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF219DC96960082772A /* CoreVideo.framework */; };
+		72791AF519DC96C20082772A /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF419DC96C20082772A /* libglfw3.a */; };
+		72791AF719DC9B790082772A /* libGLEW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF619DC9B790082772A /* libGLEW.a */; };
+		72791AFA19DCA87D0082772A /* OGLRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 72791AF919DCA87D0082772A /* OGLRender.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +32,15 @@
 /* Begin PBXFileReference section */
 		72791AE119DC87580082772A /* Fluid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Fluid; sourceTree = BUILT_PRODUCTS_DIR; };
 		72791AE419DC87580082772A /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		72791AEB19DC88630082772A /* IRender.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = IRender.h; sourceTree = "<group>"; };
+		72791AEC19DC96740082772A /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		72791AEE19DC96810082772A /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		72791AF019DC968C0082772A /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		72791AF219DC96960082772A /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		72791AF419DC96C20082772A /* libglfw3.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglfw3.a; path = 3rdparty/GLFW/lib/libglfw3.a; sourceTree = "<group>"; };
+		72791AF619DC9B790082772A /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = 3rdparty/GLEW/lib/libGLEW.a; sourceTree = "<group>"; };
+		72791AF819DCA6B40082772A /* OGLRender.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OGLRender.h; sourceTree = "<group>"; };
+		72791AF919DCA87D0082772A /* OGLRender.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = OGLRender.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +48,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				72791AF719DC9B790082772A /* libGLEW.a in Frameworks */,
+				72791AF519DC96C20082772A /* libglfw3.a in Frameworks */,
+				72791AF319DC96960082772A /* CoreVideo.framework in Frameworks */,
+				72791AF119DC968C0082772A /* IOKit.framework in Frameworks */,
+				72791AEF19DC96810082772A /* OpenGL.framework in Frameworks */,
+				72791AED19DC96750082772A /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -41,10 +63,18 @@
 		72791AD819DC87580082772A = {
 			isa = PBXGroup;
 			children = (
+				72791AF619DC9B790082772A /* libGLEW.a */,
+				72791AF419DC96C20082772A /* libglfw3.a */,
+				72791AF219DC96960082772A /* CoreVideo.framework */,
+				72791AF019DC968C0082772A /* IOKit.framework */,
+				72791AEE19DC96810082772A /* OpenGL.framework */,
+				72791AEC19DC96740082772A /* Cocoa.framework */,
 				72791AE319DC87580082772A /* Fluid */,
 				72791AE219DC87580082772A /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
+			wrapsLines = 0;
 		};
 		72791AE219DC87580082772A /* Products */ = {
 			isa = PBXGroup;
@@ -58,6 +88,9 @@
 			isa = PBXGroup;
 			children = (
 				72791AE419DC87580082772A /* main.cpp */,
+				72791AEB19DC88630082772A /* IRender.h */,
+				72791AF819DCA6B40082772A /* OGLRender.h */,
+				72791AF919DCA87D0082772A /* OGLRender.cpp */,
 			);
 			path = Fluid;
 			sourceTree = "<group>";
@@ -118,6 +151,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				72791AFA19DCA87D0082772A /* OGLRender.cpp in Sources */,
 				72791AE519DC87580082772A /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -202,6 +236,19 @@
 		72791AE919DC87580082772A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					./3rdparty/GLFW/include/,
+					./3rdparty/GLM/include/,
+					./3rdparty/GLEW/include/,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					./3rdparty/GLFW/lib/,
+					"$(PROJECT_DIR)/3rdparty/GLFW/lib",
+					"$(PROJECT_DIR)/3rdparty/GLEW/lib",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -209,6 +256,19 @@
 		72791AEA19DC87580082772A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
+					./3rdparty/GLFW/include/,
+					./3rdparty/GLM/include/,
+					./3rdparty/GLEW/include/,
+				);
+				LIBRARY_SEARCH_PATHS = (
+					./3rdparty/GLFW/lib/,
+					"$(PROJECT_DIR)/3rdparty/GLFW/lib",
+					"$(PROJECT_DIR)/3rdparty/GLEW/lib",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
