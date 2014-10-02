@@ -15,6 +15,7 @@
 		72791AF519DC96C20082772A /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF419DC96C20082772A /* libglfw3.a */; };
 		72791AF719DC9B790082772A /* libGLEW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 72791AF619DC9B790082772A /* libGLEW.a */; };
 		72791AFA19DCA87D0082772A /* OGLRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 72791AF919DCA87D0082772A /* OGLRender.cpp */; };
+		72791AFD19DDDBD50082772A /* Solver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 72791AFB19DDDBD50082772A /* Solver.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -41,6 +42,8 @@
 		72791AF619DC9B790082772A /* libGLEW.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLEW.a; path = 3rdparty/GLEW/lib/libGLEW.a; sourceTree = "<group>"; };
 		72791AF819DCA6B40082772A /* OGLRender.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OGLRender.h; sourceTree = "<group>"; };
 		72791AF919DCA87D0082772A /* OGLRender.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = OGLRender.cpp; sourceTree = "<group>"; };
+		72791AFB19DDDBD50082772A /* Solver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Solver.cpp; sourceTree = "<group>"; };
+		72791AFC19DDDBD50082772A /* Solver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Solver.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +94,8 @@
 				72791AEB19DC88630082772A /* IRender.h */,
 				72791AF819DCA6B40082772A /* OGLRender.h */,
 				72791AF919DCA87D0082772A /* OGLRender.cpp */,
+				72791AFB19DDDBD50082772A /* Solver.cpp */,
+				72791AFC19DDDBD50082772A /* Solver.h */,
 			);
 			path = Fluid;
 			sourceTree = "<group>";
@@ -151,6 +156,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				72791AFD19DDDBD50082772A /* Solver.cpp in Sources */,
 				72791AFA19DCA87D0082772A /* OGLRender.cpp in Sources */,
 				72791AE519DC87580082772A /* main.cpp in Sources */,
 			);
@@ -242,6 +248,7 @@
 					./3rdparty/GLFW/include/,
 					./3rdparty/GLM/include/,
 					./3rdparty/GLEW/include/,
+					./3rdparty/boost/include/,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					./3rdparty/GLFW/lib/,
@@ -262,6 +269,7 @@
 					./3rdparty/GLFW/include/,
 					./3rdparty/GLM/include/,
 					./3rdparty/GLEW/include/,
+					./3rdparty/boost/include/,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					./3rdparty/GLFW/lib/,

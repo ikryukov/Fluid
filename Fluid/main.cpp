@@ -16,10 +16,14 @@
 
 #include "glm/glm.hpp"
 
+#include "Solver.h"
 #include "IRender.h"
 #include "OGLRender.h"
 
 int main(int argc, const char * argv[]) {
+	
+	Solver solver(32, 32, 32, 1.0);
+	
 	GLFWwindow* window;
 	
 	/* Initialize the library */
