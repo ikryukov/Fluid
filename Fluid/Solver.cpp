@@ -50,3 +50,50 @@ Solver::~Solver()
 {
 	
 }
+
+void Solver::constructPressureMatrix()
+{
+	
+}
+
+
+void Solver::simulate(float dt)
+{
+	//TODO: calc CFL condition
+	project(dt);
+	advectVelocity(dt);
+	advectDensity(dt);
+	calcForces();
+	integrate(dt);
+	m_time += dt;
+}
+
+void Solver::project(float dt)
+{
+	
+}
+
+void Solver::advectVelocity(float dt)
+{
+	
+}
+
+void Solver::advectDensity(float dt)
+{
+	
+}
+
+void Solver::calcForces()
+{
+	
+}
+
+void Solver::integrate(float dt)
+{
+	
+}
+
+int Solver::getIdx(int x, int y, int z)
+{
+	return z + (y + (x * m_gridY)) * m_gridZ;
+}

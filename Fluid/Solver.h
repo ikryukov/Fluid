@@ -19,7 +19,6 @@
 using namespace boost::numeric::ublas;
 using namespace glm;
 
-
 typedef coordinate_matrix<float> SparseMatrix;
 typedef vector<float> Vector;
 
@@ -69,10 +68,16 @@ private:
 	vector<float> m_Pressure;
 	vector<int> m_Solid;
 	
+	void constructPressureMatrix();
+	
 	void project(float dt);
 	void advectVelocity(float dt);
 	void advectDensity(float dt);
 	void calcForces();
+	void integrate(float dt);
+	
+	// Utils
+	int getIdx(int x, int y, int z);
 
 };
 
