@@ -68,6 +68,9 @@ private:
 	vector<float> m_Pressure;
 	vector<int> m_Solid;
 	
+	// Pressure matrix
+	vector<float> m_ADiag, m_APlusX, m_APlusY, m_APlusZ;
+	
 	void constructPressureMatrix();
 	
 	void project(float dt);
