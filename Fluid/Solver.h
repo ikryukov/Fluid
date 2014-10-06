@@ -71,6 +71,11 @@ private:
 	// Pressure matrix
 	vector<float> m_ADiag, m_APlusX, m_APlusY, m_APlusZ;
 	
+	// Temporary vectors for the PCG iteration
+	vector<float> m_cgP, m_cgW, m_cgZ, m_cgR, m_cgQ;
+	// Incomplete cholesky preconditioner
+	vector<float> m_precond;
+	
 	void constructPressureMatrix();
 	
 	void project(float dt);
@@ -79,6 +84,10 @@ private:
 	void calcForces();
 	void integrate(float dt);
 	
+	float PCG(const vector<float> &b, vector<float> &x, int max_its, float tol);
+	void axpy_prod_fast(const vector<float> &x, vector<float> &y) const;
+	void precond_solve(const vector<float> &b, vector<float> &x);
+
 	// Utils
 	int getIdx(int x, int y, int z);
 
