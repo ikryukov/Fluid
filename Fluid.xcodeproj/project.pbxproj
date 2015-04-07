@@ -44,6 +44,8 @@
 		72791AF919DCA87D0082772A /* OGLRender.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; path = OGLRender.cpp; sourceTree = "<group>"; };
 		72791AFB19DDDBD50082772A /* Solver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Solver.cpp; sourceTree = "<group>"; };
 		72791AFC19DDDBD50082772A /* Solver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Solver.h; sourceTree = "<group>"; };
+		B29547A71AC5C57D009E2818 /* aabb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aabb.h; sourceTree = "<group>"; };
+		B29547A81AC5C6F4009E2818 /* Ray.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ray.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +98,8 @@
 				72791AF919DCA87D0082772A /* OGLRender.cpp */,
 				72791AFB19DDDBD50082772A /* Solver.cpp */,
 				72791AFC19DDDBD50082772A /* Solver.h */,
+				B29547A71AC5C57D009E2818 /* aabb.h */,
+				B29547A81AC5C6F4009E2818 /* Ray.h */,
 			);
 			path = Fluid;
 			sourceTree = "<group>";
@@ -300,6 +304,7 @@
 				72791AEA19DC87580082772A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

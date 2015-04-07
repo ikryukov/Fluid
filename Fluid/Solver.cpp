@@ -7,15 +7,19 @@
 //
 
 #include "Solver.h"
+#include <iostream>
 
 Solver::Solver(int gridX, int gridY, int gridZ, float dx)
 : m_gridX(gridX), m_gridY(gridY), m_gridZ(gridZ), m_dx(dx), m_time(0.0f)
 {
+	m_aabb = AABB(vec3(0,0,0), vec3(gridX,gridY,gridZ));
 	int numVelocity = (m_gridX + 1) * (m_gridY + 1) * (m_gridZ + 1);
 	m_numVoxels = m_gridX * m_gridY * m_gridZ;
 	m_Slice = gridX * gridY;
 	m_VelocitySlice = (gridX + 1) * (gridY + 1);
 	m_invDx = 1.0f / m_dx;
+	
+	m_precond.resize(m_numVoxels);
 	
 	m_Density0.resize(m_numVoxels);
 	m_Density1.resize(m_numVoxels);
@@ -59,6 +63,7 @@ Solver::Solver(int gridX, int gridY, int gridZ, float dx)
 	
 	constructPressureMatrix();
 	// TODO: calc precondition
+	computePrecondition();
 }
 
 Solver::~Solver()
@@ -68,104 +73,163 @@ Solver::~Solver()
 
 void Solver::constructPressureMatrix()
 {
-	for (int x = 0; x < m_gridX; ++x) {
-		for (int y = 0; y < m_gridY; ++y) {
-			for (int z = 0; z < m_gridZ; ++z) {
+	std::cout << "FluidSolver: Constructing pressure matrix" << std::endl;
+	for (int z=0, pos=0; z<m_gridZ; ++z) {
+		for (int y=0; y<m_gridY; ++y) {
+			for (int x=0; x<m_gridX; ++x, ++pos) {
+				bool fluid = !m_Solid[pos];
+				bool fluidRight = (x != m_gridX-1) && !m_Solid[pos+1];
+				bool fluidBelow = (y != m_gridY-1) && !m_Solid[pos+m_gridX];
+				bool fluidBehind = (z != m_gridZ-1) && !m_Solid[pos+m_Slice];
 				
-				int pos_center = getIdx(x, y, z);
-				int pos_right  = getIdx(x + 1, y, z);
-				int pos_below  = getIdx(x, y + 1, z);
-				int pos_behind = getIdx(x, y, z + 1);
-				
-				bool fluid_center = !m_Solid[pos_center];
-				bool fluid_right = (x != m_gridX - 1) && !m_Solid[pos_right];
-				bool fluid_below = (y != m_gridY - 1) && !m_Solid[pos_below];
-				bool fluid_behind = (z != m_gridZ - 1) && !m_Solid[pos_behind];
-				
-				if (fluid_center && fluid_right) {
-					m_ADiag[pos_center] += 1;
-					m_ADiag[pos_right] += 1;
-					m_APlusX[pos_center] = -1;
+				if (fluid && fluidRight) {
+					m_ADiag[pos] += 1;
+					m_ADiag[pos+1] += 1;
+					m_APlusX[pos] = -1;
 				}
 				
-				if (fluid_center && fluid_below) {
-					m_ADiag[pos_center] += 1;
-					m_ADiag[pos_below] += 1;
-					m_APlusY[pos_center] = -1;
+				if (fluid && fluidBelow) {
+					m_ADiag[pos] += 1;
+					m_ADiag[pos+m_gridX] += 1;
+					m_APlusY[pos] = -1;
 				}
 				
-				if (fluid_center && fluid_behind) {
-					m_ADiag[pos_center] += 1;
-					m_ADiag[pos_behind] += 1;
-					m_APlusZ[pos_center] = -1;
+				if (fluid && fluidBehind) {
+					m_ADiag[pos] += 1;
+					m_ADiag[pos+m_Slice] += 1;
+					m_APlusZ[pos] = -1;
 				}
 			}
 		}
 	}
 }
 
+void Solver::computePrecondition()
+{
+	std::cout << "FluidSolver: Computing the MIC preconditioner" << std::endl;
+	const float rho = .25f, tau = 0.97f;
+	for (int z=0, pos=0; z<m_gridZ; ++z) {
+		for (int y=0; y<m_gridY; ++y) {
+			for (int x=0; x<m_gridX; ++x, ++pos) {
+				if (m_Solid[pos])
+					continue;
+				float termLeft = 0.0f, termAbove = 0.0f, termFront = 0.0f,
+				termLeft2 = 0.0f, termAbove2 = 0.0f, termFront2 = 0.0f;
+				if (x > 0 && !m_Solid[pos-1]) {
+					termLeft  = m_APlusX[pos-1] * m_precond[pos-1];
+					termLeft2 = m_APlusX[pos-1] * (m_APlusY[pos-1] + m_APlusZ[pos-1]) * m_precond[pos-1] * m_precond[pos-1];
+				}
+				
+				if (y > 0 && !m_Solid[pos-m_gridX]) {
+					termAbove  = m_APlusY[pos-m_gridX] * m_precond[pos-m_gridX];
+					termAbove2 = m_APlusY[pos-m_gridX] * (m_APlusX[pos-m_gridX] + m_APlusZ[pos-m_gridX]) * m_precond[pos-m_gridX] * m_precond[pos-m_gridX];
+				}
+				
+				if (z > 0 && !m_Solid[pos-m_Slice]) {
+					termFront  = m_APlusZ[pos-m_Slice] * m_precond[pos-m_Slice];
+					termFront2 = m_APlusZ[pos-m_Slice] * (m_APlusX[pos-m_Slice] + m_APlusY[pos-m_Slice]) * m_precond[pos-m_Slice] * m_precond[pos-m_Slice];
+				}
+				
+				float e = m_ADiag[pos] - termLeft*termLeft - termAbove*termAbove
+				- termFront*termFront - tau * (termLeft2 + termAbove2 + termFront2);
+				if (e < rho * m_ADiag[pos])
+					e = m_ADiag[pos];
+				m_precond[pos] = 1.0f / std::sqrt(e);
+			}
+		}
+	}
+}
 
 void Solver::simulate(float dt)
 {
+	std::cout << "solver::simulate " << m_time << std::endl;
 	//TODO: calc CFL condition
 	project(dt);
 	advectVelocity(dt);
 	advectDensity(dt);
 	calcForces();
+	
+	float targetTemp = 273+8.4, rateDensity = 10.0f;
+	
+	int rad = 4;
+	for (int i=-rad; i<=rad; ++i) {
+		for (int j=-rad; j<=rad; ++j) {
+			int x=m_gridX-1, y = m_gridY-1 - 6+i, z = m_gridZ/2+j;
+			float tmp = rad*rad - i*i-j*j;
+			if (tmp < 0)
+				continue;
+			int dist = -std::max((int) std::sqrt(tmp)-1, 0);
+			m_Density0[dist + x + y * m_gridX + z * m_Slice].density = dt*rateDensity;
+			m_Density0[dist + x + y * m_gridX + z * m_Slice].temp = targetTemp;
+			m_F[0][dist + x + y * (m_gridX+1) + z * m_VelocitySlice] = -3.8f;
+		}
+	}
+	
+	int z;
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int velIdx = z * m_VelocitySlice;
+			for (int y=0; y<m_gridY; ++y, ++velIdx) {
+				for (int x=0; x<m_gridX; ++x, ++velIdx) {
+					m_u0[0][velIdx] += dt*m_F[0][velIdx];
+					m_u0[1][velIdx] += dt*m_F[1][velIdx];
+					m_u0[2][velIdx] += dt*m_F[2][velIdx];
+				}
+			}
+		}
+	}
+	
 	integrate(dt);
 	m_time += dt;
 }
 
 void Solver::project(float dt)
 {
-	// Calculate divergence
-	for (int x = 0 ; x < m_gridX; ++x) {
-		int velIdx = x * m_VelocitySlice;
-		int pos = x * m_Slice;
-		for (int y = 0; y < m_gridY; ++y) {
-			for (int z = 0; z < m_gridZ; ++z) {
-				if (m_Solid[pos]) {
-					m_Divergence[pos] = 0;
-					continue;
+	/* Calculate the divergence */
+#pragma omp parallel
+	{
+#pragma omp for schedule(dynamic, CHUNKSIZE)
+		for (int z=0; z<m_gridZ; ++z) {
+			int velIdx = z * m_VelocitySlice, pos = z * m_Slice;
+			for (int y=0; y<m_gridY; ++y, ++velIdx) {
+				for (int x=0; x<m_gridX; ++x, ++pos, ++velIdx) {
+					if (m_Solid[pos]) {
+						m_Divergence[pos] = 0;
+						continue;
+					}
+					m_Divergence[pos] =
+					(m_u0[0][velIdx+1]           - m_u0[0][velIdx]
+					 + m_u0[1][velIdx+m_gridX+1]   - m_u0[1][velIdx]
+					 + m_u0[2][velIdx+m_VelocitySlice]  - m_u0[2][velIdx])
+					* m_invDx;
 				}
-				m_Divergence[pos] = (m_u0[0][velIdx + 1] - m_u0[0][velIdx]
-									 + m_u0[1][velIdx + m_gridZ + 1] - m_u0[1][velIdx]
-									 + m_u0[2][velIdx + m_VelocitySlice] - m_u0[2][velIdx])
-				* m_invDx;
-				++pos;
-				++velIdx;
 			}
-			++velIdx;
 		}
 	}
-	PCG(m_Divergence * (m_dx * m_dx), m_Pressure, 100, 1e-4);
 	
-	// Apply the computed gradient
-	for (int x = 0; x < m_gridX; ++x)
+	PCG(m_Divergence * (m_dx*m_dx), m_Pressure, 100, 1e-4);
+	
+	/* Apply the computed gradients */
+#pragma omp parallel
 	{
-		int pos = x * m_Slice;
-		for (int y = 0; y < m_gridY; ++y)
-		{
-			for (int z = 0; z < m_gridZ; ++z)
-			{
-				if (m_Solid[pos])
-				{
-					continue;
+#pragma omp for schedule(dynamic, CHUNKSIZE)
+		for (int z=0; z<m_gridZ; ++z) {
+			int pos = z * m_Slice;
+			for (int y=0; y<m_gridY; ++y) {
+				for (int x=0; x<m_gridX; ++x, ++pos) {
+					if (m_Solid[pos])
+						continue;
+					int velIdx = x + y * (m_gridX+1) + z * m_VelocitySlice;
+					if (x < m_gridX-1 && !m_Solid[pos + 1])
+						m_u1[0][velIdx+1] = m_u0[0][velIdx+1] +
+						(m_Pressure[pos+1] - m_Pressure[pos]) * m_invDx;
+					if (y < m_gridY-1 && !m_Solid[pos + m_gridX])
+						m_u1[1][velIdx+m_gridX+1] = m_u0[1][velIdx+m_gridX+1] +
+						(m_Pressure[pos+m_gridX] - m_Pressure[pos]) * m_invDx;
+					if (z < m_gridZ-1 && !m_Solid[pos + m_Slice])
+						m_u1[2][velIdx+m_VelocitySlice] = m_u0[2][velIdx+m_VelocitySlice] +
+						(m_Pressure[pos+m_Slice] - m_Pressure[pos]) * m_invDx;
 				}
-				int velIdx = z + y * (m_gridZ + 1) + x * m_VelocitySlice;
-				if (z < m_gridZ - 1 && !m_Solid[pos + 1])
-				{
-					m_u1[0][velIdx + 1] = m_u0[0][velIdx + 1] + (m_Pressure[pos + 1] - m_Pressure[pos]) * m_invDx;
-				}
-				if (y < m_gridY - 1 && m_Solid[pos + m_gridZ])
-				{
-					m_u1[1][velIdx + m_gridZ + 1] = m_u0[1][velIdx + m_gridZ + 1] + (m_Pressure[pos + m_gridZ] - m_Pressure[pos]) * m_invDx;
-				}
-				if (x < m_gridX - 1 && !m_Solid[pos + m_Slice])
-				{
-					m_u1[2][velIdx + m_VelocitySlice] = m_u0[2][velIdx + m_VelocitySlice] + (m_Pressure[pos + m_Slice] - m_Pressure[pos]) * m_invDx;
-				}
-				++pos;
 			}
 		}
 	}
@@ -177,17 +241,175 @@ void Solver::project(float dt)
 
 void Solver::advectVelocity(float dt)
 {
+	int z;
 	
+	/* Advect the velocity field */
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int pos = z*m_Slice;
+			for (int y=0; y<m_gridY; ++y) {
+				for (int x=0; x<m_gridX; ++x, ++pos) {
+					int velIdx = x + y * (m_gridX+1) + z * m_VelocitySlice;
+					if (m_Solid[pos])
+						continue;
+					
+					/* Advect X velocities */
+					if (x < m_gridX-1 && !m_Solid[pos + 1]) {
+						vec3 p((x+1.0f)*m_dx, (y+.5f)*m_dx, (z+0.5f)*m_dx);
+						vec3 p2 = traceParticle(p, -dt);
+						m_u1[0][velIdx+1] = getVelocity(p2).x;
+					}
+					
+					/* Advect Y velocities */
+					if (y < m_gridY-1 && !m_Solid[pos + m_gridX]) {
+						vec3 p((x+0.5f)*m_dx, (y+1.0f)*m_dx, (z+0.5f)*m_dx);
+						vec3 p2 = traceParticle(p, -dt);
+						m_u1[1][velIdx+m_gridX+1] = getVelocity(p2).y;
+					}
+					
+					/* Advect Z velocities */
+					if (z < m_gridZ-1 && !m_Solid[pos + m_Slice]) {
+						vec3 p((x+0.5f)*m_dx, (y+0.5f)*m_dx, (z+1.0f)*m_dx);
+						vec3 p2 = traceParticle(p, -dt);
+						m_u1[2][velIdx+m_VelocitySlice] = getVelocity(p2).z;
+					}
+				}
+			}
+		}
+	}
+	
+	m_u0[0].swap(m_u1[0]);
+	m_u0[1].swap(m_u1[1]);
+	m_u0[2].swap(m_u1[2]);
 }
 
 void Solver::advectDensity(float dt)
 {
+	/* Advect the density field */
+	int z;
 	
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int pos = z*m_Slice;
+			for (int y=0; y<m_gridY; ++y) {
+				for (int x=0; x<m_gridX; ++x, ++pos) {
+					if (pos >= m_numVoxels) {
+						break;
+					}
+					if (m_Solid[pos])
+						continue;
+					vec3 p((x+.5f)*m_dx, (y+.5f)*m_dx, (z+.5f)*m_dx);
+					vec3 p2 = traceParticle(p, -dt);
+					m_Density1[pos] = getDensity(p2.x, p2.y, p2.z);
+				}
+			}
+		}
+	}
+	m_Density0.swap(m_Density1);
 }
 
 void Solver::calcForces()
 {
+	int z;
+	std::fill(m_F[0].begin(), m_F[0].end(), 0);
+	std::fill(m_F[1].begin(), m_F[1].end(), 0);
+	std::fill(m_F[2].begin(), m_F[2].end(), 0);
 	
+	/* Calculate the magnitude of the curl */
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int pos = z * m_Slice;
+			for (int y=0; y<m_gridY; ++y) {
+				for (int x=0; x<m_gridX; ++x, ++pos) {
+					if (m_Solid[pos])
+						continue;
+					vec3 velTop     = getVelocity(vec3((x+0.5f)*m_dx, (y+0.0f)*m_dx, (z+0.5f)*m_dx));
+					vec3 velBot     = getVelocity(vec3((x+0.5f)*m_dx, (y+1.0f)*m_dx, (z+0.5f)*m_dx));
+					vec3 velLeft    = getVelocity(vec3((x+0.0f)*m_dx, (y+0.5f)*m_dx, (z+0.5f)*m_dx));
+					vec3 velRight   = getVelocity(vec3((x+1.0f)*m_dx, (y+0.5f)*m_dx, (z+0.5f)*m_dx));
+					vec3 velFront   = getVelocity(vec3((x+0.5f)*m_dx, (y+0.5f)*m_dx, (z+0.0f)*m_dx));
+					vec3 velBack    = getVelocity(vec3((x+0.5f)*m_dx, (y+0.5f)*m_dx, (z+1.0f)*m_dx));
+					
+					vec3 dudx = (velRight - velLeft) / m_dx;
+					vec3 dudy = (velBot - velTop) / m_dx;
+					vec3 dudz = (velBack - velFront) / m_dx;
+					vec3 curl(dudy.z - dudz.y, dudz.x - dudx.z, dudx.y-dudy.x);
+					m_Curl[pos] = curl;
+					m_CurlMagnitude[pos] = curl.length();
+				}
+			}
+		}
+	}
+	
+	/* Add the vorticity confinement force */
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int pos = z * m_Slice;
+			for (int y=0; y<m_gridY; ++y) {
+				for (int x=0; x<m_gridX; ++x, ++pos) {
+					if (y==0 || x==0 || z == 0 || x==m_gridX-1
+						|| y==m_gridY-1 || z == m_gridZ-1 || m_Solid[pos]) {
+						m_Curl[pos] = vec3(0,0,0);
+						continue;
+					}
+					vec3 N(
+							  m_CurlMagnitude[pos+1]- m_CurlMagnitude[pos-1],
+							  m_CurlMagnitude[pos+m_gridX]- m_CurlMagnitude[pos-m_gridX],
+							  m_CurlMagnitude[pos+m_Slice]- m_CurlMagnitude[pos-m_Slice]
+							  );
+					float length = N.length();
+					if (length < Epsilon)
+						continue;
+					m_vcForce[pos] = cross(N / length, m_Curl[pos]) * (m_dx * 0.8f);
+				}
+			}
+		}
+	}
+	
+	/* Add the buoyancy force */
+	float ambient = 273.0f;
+	/*	int nCells = 0;
+	 for (int z=0, pos=0; z<m_gridZ; ++z) {
+		for (int y=0; y<m_gridY; ++y) {
+	 for (int x=0; x<m_gridX; ++x, ++pos) {
+	 if (m_solid[pos])
+	 continue;
+	 ambient += m_d0[pos].temp;
+	 if (m_d0[pos].temp != 273)
+	 ++nCells;
+	 }
+		}
+	 }
+	 ambient /= nCells;
+	 cout << ambient << endl;
+	 */
+	const float a = 0.0625f*0.5f, b=0.025f;
+	{
+		for (z=0; z<m_gridZ; ++z) {
+			int pos = z * m_Slice;
+			int velIdx = z * m_VelocitySlice;
+			for (int y=0; y<m_gridY; ++y, ++velIdx) {
+				for (int x=0; x<m_gridX; ++x, ++velIdx, ++pos) {
+					if (m_Solid[pos])
+						continue;
+					
+					const Density top   = getDensity((x+.5f)*m_dx, y*m_dx, (z+.5f)*m_dx);
+					
+					if (x != 0 && !m_Solid[pos-1])
+						m_F[0][velIdx] += (m_vcForce[pos].x + m_vcForce[pos-1].x)/2.0f;
+					
+					if (y!= 0 && !m_Solid[pos-m_gridX]) {
+						m_F[1][velIdx] -= -a*top.density + b*(top.temp-ambient);
+						m_F[1][velIdx] += (m_vcForce[pos].y + m_vcForce[pos-m_gridX].y)/2.0f;
+					}
+					
+					if (z != 0 && !m_Solid[pos-m_Slice])
+						m_F[2][velIdx] += (m_vcForce[pos].z + m_vcForce[pos-m_Slice].z)/2.0f;
+				}
+			}
+		}
+	}
+
 }
 
 void Solver::integrate(float dt)

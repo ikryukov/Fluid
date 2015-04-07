@@ -13,6 +13,8 @@
 
 #include "GL/glew.h"
 
+#include "Solver.h"
+
 class OGLRender : public IRender {
 	
 private:
@@ -22,6 +24,7 @@ private:
 public:
 	void init(int width, int height);
 	void render();
+	void render(Solver* fsolver);
 
 };
 

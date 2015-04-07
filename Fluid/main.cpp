@@ -22,15 +22,15 @@
 
 int main(int argc, const char * argv[]) {
 	
-	Solver solver(32, 32, 32, 1.0);
+	Solver solver(32, 32, 16, 0.5f/60.0f * 5.0f);
 	
 	GLFWwindow* window;
 	
-	/* Initialize the library */
+	// Initialize the library
 	if (!glfwInit())
 		return -1;
 	
-	/* Create a windowed mode window and its OpenGL context */
+	// Create a windowed mode window and its OpenGL context
 	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
 	if (!window)
 	{
@@ -44,17 +44,20 @@ int main(int argc, const char * argv[]) {
 	
 	glViewport(0, 0, width, height);
 	
+	
 	OGLRender render;
 	render.init(width, height);
 	
 	glfwSwapInterval(1);
-	/* Make the window's context current */
+	// Make the window's context current
 	glfwMakeContextCurrent(window);
 	
-	/* Loop until the user closes the window */
+	// Loop until the user closes the window
 	while (!glfwWindowShouldClose(window))
 	{
-		render.render();
+		render.render(&solver);
+		solver.simulate(0.1);
+		//render.render();
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -62,5 +65,6 @@ int main(int argc, const char * argv[]) {
 	
 	glfwDestroyWindow(window);
 	glfwTerminate();
+	
     return 0;
 }
