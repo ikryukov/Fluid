@@ -186,9 +186,7 @@ void Solver::simulate(float dt)
 void Solver::project(float dt)
 {
 	/* Calculate the divergence */
-#pragma omp parallel
 	{
-#pragma omp for schedule(dynamic, CHUNKSIZE)
 		for (int z=0; z<m_gridZ; ++z) {
 			int velIdx = z * m_VelocitySlice, pos = z * m_Slice;
 			for (int y=0; y<m_gridY; ++y, ++velIdx) {
@@ -210,9 +208,7 @@ void Solver::project(float dt)
 	PCG(m_Divergence * (m_dx*m_dx), m_Pressure, 100, 1e-4);
 	
 	/* Apply the computed gradients */
-#pragma omp parallel
 	{
-#pragma omp for schedule(dynamic, CHUNKSIZE)
 		for (int z=0; z<m_gridZ; ++z) {
 			int pos = z * m_Slice;
 			for (int y=0; y<m_gridY; ++y) {
