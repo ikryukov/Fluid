@@ -196,10 +196,10 @@ void Solver::project(float dt)
 						continue;
 					}
 					m_Divergence[pos] =
-					(m_u0[0][velIdx+1]           - m_u0[0][velIdx]
-					 + m_u0[1][velIdx+m_gridX+1]   - m_u0[1][velIdx]
+					  (m_u0[0][velIdx+1]                - m_u0[0][velIdx]
+					 + m_u0[1][velIdx+m_gridX+1]        - m_u0[1][velIdx]
 					 + m_u0[2][velIdx+m_VelocitySlice]  - m_u0[2][velIdx])
-					* m_invDx;
+					 * m_invDx;
 				}
 			}
 		}

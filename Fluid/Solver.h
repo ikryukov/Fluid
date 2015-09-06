@@ -81,7 +81,8 @@ public:
 	}
 	
 	inline Density getDensity(float x, float y, float z) const {
-		return getDensityCatmullRom(x, y, z);
+		//return getDensityCatmullRom(x, y, z);
+		return getDensityTrilinear(x, y, z);
 	}
 	
 private:
@@ -158,6 +159,46 @@ private:
 							+ (1-alpha) * beta * C1 + alpha*beta*D1)
 		+ gamma * ((1-alpha) * (1-beta) * A2 + alpha * (1-beta) * B2
 				   + (1-alpha) * beta * C2 + alpha*beta*D2);
+	}
+	
+	Density getDensityTrilinear(float x, float y, float z) const {
+		x = (x / m_dx) - .5f;
+		y = (y / m_dx) - .5f;
+		z = (z / m_dx) - .5f;
+		
+		const int i = (int) x, j = (int) y, k = (int) z,
+		pos=i+j*m_gridX+k*m_Slice;
+		
+		if (i < 0 || j < 0 || k < 0 || i > m_gridX-1 ||
+			j > m_gridY-1 || k > m_gridZ-1)
+			return Density();
+		
+		const float alpha = x-i,
+		beta = y-j,
+		gamma = z-k;
+		
+		const Density
+		A1 = m_Density0[pos],
+		B1 = (i+1<m_gridX) ? m_Density0[pos+1] : Density(),
+		C1 = (j+1<m_gridY) ? m_Density0[pos+m_gridX] : Density(),
+		D1 = (i+1<m_gridX && j+1<m_gridY) ? m_Density0[pos+m_gridX+1] : Density();
+		
+		Density A2, B2, C2, D2;
+		if (k + 1 < m_gridZ) {
+			A2 = m_Density0[pos+m_Slice];
+			B2 = (i+1<m_gridX) ? m_Density0[pos+1+m_Slice] : Density();
+			C2 = (j+1<m_gridY) ? m_Density0[pos+m_gridX+m_Slice] : Density();
+			D2 = (i+1<m_gridX && j+1<m_gridY) ? m_Density0[pos+m_gridX+m_Slice+1] : Density();
+		}
+		
+		return  (A1 * ((1-alpha) * (1-beta))
+			  +  B1 * (   alpha  * (1-beta))
+			  +  C1 * ((1-alpha) *    beta)
+			  +  D1 *     alpha  *    beta) * (1-gamma)
+		+ (A2 * ((1-alpha) * (1-beta))
+			  +  B2 * (   alpha  * (1-beta))
+			  +  C2 * ((1-alpha) *    beta)
+			  +  D2 *     alpha  *    beta) * gamma;
 	}
 	
 	inline Density getDensityCatmullRom(float x, float y, float z) const {
