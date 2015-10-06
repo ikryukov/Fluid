@@ -216,3 +216,5 @@ pip-log.txt
 .mr.developer.cfg
 
 3rdparty/
+3rdparty/GLFW/include/GLFW/glfw3.h
+3rdparty/GLFW/include/GLFW/glfw3native.h
