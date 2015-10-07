@@ -22,7 +22,7 @@
 
 int main(int argc, const char * argv[]) {
 	
-	Solver solver(64, 64, 64, 0.5f / 60.0f * 5.0f);
+	Solver solver(32, 32, 16, 0.5f / 60.0f * 5.0f);
 	
 	GLFWwindow* window;
 	

@@ -217,4 +217,5 @@ pip-log.txt
 
 3rdparty/
 3rdparty/GLFW/include/GLFW/glfw3.h
+compiler/CMakeFiles/
 3rdparty/GLFW/include/GLFW/glfw3native.h

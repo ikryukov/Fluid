@@ -38,5 +38,7 @@ link_directories (
 source_group ("Header Files" FILES ${HEADERS})
 source_group ("Source Files" FILES ${SOURCES})
 
+set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+
 add_executable (${PROJECT} ${HEADERS} ${SOURCES})
 target_link_libraries (${PROJECT} ${LIBRARIES})
