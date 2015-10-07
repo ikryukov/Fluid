@@ -205,7 +205,7 @@ void Solver::project(float dt)
 		}
 	}
 	
-	PCG(m_Divergence * (m_dx*m_dx), m_Pressure, 100, 1e-4);
+	PCG(m_Divergence * (m_dx * m_dx), m_Pressure, 100, 1e-4);
 	
 	/* Apply the computed gradients */
 	{
@@ -251,7 +251,7 @@ void Solver::advectVelocity(float dt)
 					
 					/* Advect X velocities */
 					if (x < m_gridX-1 && !m_Solid[pos + 1]) {
-						vec3 p((x+1.0f)*m_dx, (y+.5f)*m_dx, (z+0.5f)*m_dx);
+						vec3 p((x+1.0f)*m_dx, (y+0.5f)*m_dx, (z+0.5f)*m_dx);
 						vec3 p2 = traceParticle(p, -dt);
 						m_u1[0][velIdx+1] = getVelocity(p2).x;
 					}

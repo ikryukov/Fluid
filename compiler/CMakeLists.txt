@@ -13,9 +13,16 @@ include_directories (
 
 set (LIBRARIES
 		glfw3
-		glew32
-		glu32
-		opengl32 )
+		glew
+ )
+
+if (APPLE)
+    find_package (OpenGL REQUIRED)
+    include_directories(/usr/local/include)
+    find_library(COCOA_LIBRARY Cocoa REQUIRED)
+    find_library(IOKIT_LIBRARY IOKit REQUIRED)
+    find_library(COREVID_LIBRARY CoreVideo REQUIRED)
+endif (APPLE)
 
 set (HEADERS
 		../src/aabb.h
@@ -41,4 +48,4 @@ source_group ("Source Files" FILES ${SOURCES})
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 add_executable (${PROJECT} ${HEADERS} ${SOURCES})
-target_link_libraries (${PROJECT} ${LIBRARIES})
+target_link_libraries (${PROJECT} ${OPENGL_LIBRARIES} ${LIBRARIES} ${COCOA_LIBRARY} ${COREVID_LIBRARY} ${IOKIT_LIBRARY})
