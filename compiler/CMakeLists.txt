@@ -25,14 +25,9 @@ if (APPLE)
 endif (APPLE)
 
 set (HEADERS
-		../src/aabb.h
-		../src/IRender.h
-		../src/OGLRender.h
-		../src/Ray.h
 		../src/Solver.h
 		)
 set (SOURCES 
-		../src/OGLRender.cpp
 		../src/Solver.cpp
 		../src/main.cpp)
 
