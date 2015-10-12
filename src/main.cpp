@@ -17,6 +17,8 @@
 
 using namespace glm;
 
+const int INSTANCE_BUFFER_SIZE = 1 << 10;
+
 static void error_callback(int error, const char* description)
 {
     fputs(description, stderr);
@@ -102,6 +104,11 @@ GLuint BuildProgram(const char* vertexShaderSource, const char* fragmentShaderSo
     return programHandle;
 }
 
+struct LineVertex
+{
+    vec3 Position;
+};
+
 struct Vertex {
     glm::vec3 Position;
     glm::vec3 Normal;
@@ -123,10 +130,56 @@ struct VBO
     GLuint m_verticesCount;
 };
 
+struct RenderItem
+{
+    int VBO;
+    mat4x4 m_transform;
+};
+
 class GLRender {
 public:
     GLRender() {
         
+    }
+    
+    VBO prepareLineForRender(std::vector<vec3> points, std::vector<int> indices)
+    {
+        std::vector<LineVertex> vertices(indices.size());
+        for (size_t i = 0; i < indices.size();)
+        {
+            vertices[i + 0].Position= points[indices[i + 0]];
+            vertices[i + 1].Position = points[indices[i + 1]];
+            i += 2;
+        }
+        
+        VBO curr;
+        glGenVertexArrays(1, &curr.m_VAO);
+        glBindVertexArray(curr.m_VAO);
+        
+        // Create the VBO for the vertices.
+        glGenBuffers(1, &curr.m_vertexBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, curr.m_vertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertices[0]), &vertices[0], GL_STATIC_DRAW);
+        assert(curr.m_vertexBuffer != 0);
+        glEnableVertexAttribArray(m_attribLinePosition);
+        glVertexAttribPointer(m_attribLinePosition, 3, GL_FLOAT, GL_FALSE, sizeof(LineVertex), (GLvoid*) 0);
+        
+        for (int i = 0; i < 4; ++i)
+        {
+            glEnableVertexAttribArray(m_attribLineInstanceMatrix + i);
+            checkGlError("glEnableVertexAttribArray");
+            glVertexAttribPointer(m_attribLineInstanceMatrix + i, 4, GL_FLOAT, GL_FALSE, sizeof(mat4x4), (GLvoid*) (0 + i * sizeof(vec4)));
+            checkGlError("glVertexAttribPointer");
+            glVertexAttribDivisor(m_attribLineInstanceMatrix + i, 1);
+            checkGlError("glVertexAttribDivisor");
+        }
+        
+        glBindVertexArray(0);
+        
+        curr.m_verticesCount = (GLuint) indices.size();
+        
+        
+        return curr;
     }
     
     VBO prepareObjectForRender(std::vector<vec3> points, std::vector<int> indices)
@@ -204,6 +257,13 @@ public:
                                        fragmentShaderSource.c_str());
         checkGlError("program");
         
+        shaderPath = std::string("Line.vert");
+        vertexShaderSource = loadShaderFromFile(shaderPath);
+        shaderPath = std::string("Line.frag");
+        fragmentShaderSource = loadShaderFromFile(shaderPath);
+        
+        m_lineShaderProgram = BuildProgram(vertexShaderSource.c_str(), fragmentShaderSource.c_str());
+        
         // set uniforms
         m_uniformProjection = glGetUniformLocation(m_shaderProgram, "Projection");
         checkGlError("get uniform Projection");
@@ -219,13 +279,46 @@ public:
         m_attribNormal = glGetAttribLocation(m_shaderProgram, "Normal");
         checkGlError("getAttrib Normal");
         
+        // Line render pass
+        m_attribLinePosition = glGetAttribLocation(m_lineShaderProgram, "Position");
+        checkGlError("glGetAttribLocation Position");
+        
+        m_attribLineInstanceMatrix = glGetAttribLocation(m_lineShaderProgram, "InstanceMatrix");
+        checkGlError("glGetAttribLocation InstanceMatrix");
+
+        glGenBuffers(1, &m_buffInstanceMatrixVBO);
+        checkGlError("glGenBuffers");
+        glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceMatrixVBO);
+        checkGlError("glBindBuffer");
+        glBufferData(GL_ARRAY_BUFFER, INSTANCE_BUFFER_SIZE * sizeof(mat4x4), NULL, GL_DYNAMIC_DRAW);
+        checkGlError("glBufferData");
+        
+        // set uniforms
+        m_uniformLineProjection = glGetUniformLocation(m_lineShaderProgram, "Projection");
+        checkGlError("get uniform Line Projection");
+        m_uniformLineView = glGetUniformLocation(m_lineShaderProgram, "View");
+        checkGlError("get uniform View");
+        m_uniformLineColor = glGetUniformLocation(m_lineShaderProgram, "Color");
+        checkGlError("get uniform Color");
+        
+        
         m_height = height;
         m_with = width;
         m_rotationAngle = 0.0f;
-        addBox();
+
+        int boxId = addBBox();
+        RenderItem ri;
+        
+        ri.m_transform = mat4(1.0f);
+        ri.m_transform = glm::translate(ri.m_transform, vec3(1, 1, 1));
+        ri.m_transform = glm::scale(ri.m_transform, vec3(0.1, 0.1, 0.1));
+        ri.VBO = boxId;
+        
+        submitToLineRender(ri);
+        
     }
     
-    void addBox()
+    VBO addBox()
     {
         std::vector<vec3> vertices(8);
         vertices[0] = vec3(1, 1, 1);
@@ -253,41 +346,110 @@ public:
             7, 3, 2 };
         std::vector<int> indices(ind, ind + 36);
         VBO curr = prepareObjectForRender(vertices, indices);
-        m_renderQueue.push_back(curr);
+        return curr;
+    }
+    
+    int nextId()
+    {
+        static int id = 0;
+        return ++id;
+    }
+    
+    int addBBox()
+    {
+        std::vector<vec3> vertices(8);
+        vertices[0] = vec3(1, 1, 1);
+        vertices[1] = vec3(-1, 1, 1);
+        vertices[2] = vec3(-1, 1, -1);
+        vertices[3] = vec3(1, 1, -1);
+        
+        vertices[4] = vec3(1, -1, -1);
+        vertices[5] = vec3(1, -1, 1);
+        vertices[6] = vec3(-1, -1, 1);
+        vertices[7] = vec3(-1, -1, -1);
+        
+        int ind[24] =
+        {
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 5, 1, 6, 2, 7, 3, 4
+        };
+        std::vector<int> indices(ind, ind + 24);
+        VBO curr = prepareLineForRender(vertices, indices);
+        int id = nextId();
+        m_idToVBO[id] = curr;
+        return id;
     }
     
     void render()
-    {
-        renderSolid();
-    }
-    
-    void renderSolid()
     {
         glClearColor(0.5, 0.5, 0.5, 1.0);
         checkGlError("glClearColor");
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkGlError("glClear");
-        glViewport(0, 0, m_with, m_height);
-        checkGlError("glViewport");
-        
-        glm::mat4 viewMatrix = glm::lookAt(glm::vec3(10, 0, 10), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+
+//        renderSolid();
+        renderLines();
+    }
+    
+    void renderSolid()
+    {
+        glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0, 0, 4), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
         glm::mat4 projectionMatrix = glm::perspectiveFov(45.0f, (m_with + 0.0f), m_height + 0.0f, 0.1f, 1000.0f);
-        mat4 identity = mat4(1.0f);
         
         glUseProgram(m_shaderProgram);
         checkGlError("glUseProgram(m_shaderProgram);");
         glUniformMatrix4fv(m_uniformProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
         glUniformMatrix4fv(m_uniformView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
         
-        vec4 color(0.8, 0.1, 0.4, 1);
-        glUniform4fv(m_uniformColor, 1, value_ptr(color));
+    }
+    
+    void renderLines()
+    {
+        glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0, 0, 4), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+        glm::mat4 projectionMatrix = glm::perspectiveFov(45.0f, (m_with + 0.0f), m_height + 0.0f, 0.1f, 1000.0f);
+        mat4 identity = mat4(1.0f);
         
-        for (int i = 0; i < m_renderQueue.size(); ++i) {
-            glUniformMatrix4fv(m_uniformTransform, 1, GL_FALSE, glm::value_ptr(glm::mat4x4(1.0f)));
-            checkGlError("glUniformMatrix4fv");
-            glBindVertexArray(m_renderQueue[i].m_VAO);
-            glDrawArrays(GL_TRIANGLES, 0, m_renderQueue[i].m_verticesCount);
-            checkGlError("glDrawArrays");
+        glUseProgram(m_lineShaderProgram);
+        checkGlError("glUseProgram(m_lineShaderProgram);");
+        glUniformMatrix4fv(m_uniformLineProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+        glUniformMatrix4fv(m_uniformLineView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+        
+        vec4 color(1.0, 1.0, 1.0, 1.0);
+        glUniform4fv(m_uniformColor, 1, value_ptr(color));
+
+        
+        for (std::map<int, std::vector<RenderItem> >::iterator it = m_renderLineQueue.begin(); it != m_renderLineQueue.end(); ++it)
+        {
+            std::vector<RenderItem> instances = it->second;
+            std::vector<mat4x4> buffInstanceMatrices(instances.size());
+            
+            VBO currVBO = m_idToVBO[it->first];
+            glBindVertexArray(currVBO.m_VAO);
+            
+            for (int i = 0; i < instances.size(); ++i)
+            {
+                //buffInstanceMatrices[i] = instances[i].m_transform;
+                buffInstanceMatrices[i] = mat4(1.0f);
+            }
+            glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceMatrixVBO);
+            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(mat4x4), &buffInstanceMatrices[0], GL_DYNAMIC_DRAW);
+            glDrawArraysInstanced(GL_LINES, 0, currVBO.m_verticesCount, (GLsizei) instances.size());
+            checkGlError("glDrawArraysInstanced");
+            glBindVertexArray(0);
+        }
+    }
+    
+    void submitToLineRender(RenderItem& ri)
+    {
+        if (m_renderLineQueue.count(ri.VBO))
+        {
+            m_renderLineQueue[ri.VBO].push_back(ri);
+        }
+        else
+        {
+            m_renderLineQueue[ri.VBO].push_back(ri);
+        
         }
     }
     
@@ -295,7 +457,9 @@ private:
     int m_with, m_height;
     float m_rotationAngle;
     
-    std::vector<VBO> m_renderQueue;
+    std::map<int, VBO> m_idToVBO;
+    std::vector<RenderItem> m_renderSolidQueue;
+    std::map<int, std::vector<RenderItem> > m_renderLineQueue;
     
     glm::mat4 m_rotation, m_scale, m_translation;
     glm::mat4 m_modelViewMatrix, m_projectionMatrix;
@@ -306,10 +470,19 @@ private:
     
     GLuint m_shaderProgram;
     
+    GLuint m_lineShaderProgram;
+    
     // uniforms
     GLint m_uniformProjection, m_uniformView, m_uniformTransform, m_uniformColor;
     // attribs
     GLint m_attribPosition, m_attribNormal;
+    
+    // Line render pass attribs
+    GLint m_attribLinePosition, m_attribLineInstanceMatrix;
+    // Line render pass uniforms
+    GLint m_uniformLineProjection, m_uniformLineView, m_uniformLineColor;
+    GLuint m_buffInstanceMatrixVBO;
+    
 };
 
 int main(void)
