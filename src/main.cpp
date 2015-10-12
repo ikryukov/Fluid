@@ -17,6 +17,8 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
+#include "Solver.h"
+
 using namespace glm;
 
 const int INSTANCE_BUFFER_SIZE = 1 << 10;
@@ -310,25 +312,35 @@ public:
         m_with = width;
         m_rotationAngle = 0.0f;
 
-        int boxId = addBBox();
+        m_boxId = addBBox();
 
-		for (int i = 0; i < 10; ++i)
-		{
-			for (int j = 0; j < 10; ++j)
-			{
-				for (int k = 0; k < 10; ++k)
-				{
-					RenderItem ri;
-					ri.m_transform = mat4(1.0f);
-					ri.m_transform = glm::translate(ri.m_transform, vec3(i * 0.1, j * 0.1, k * 0.1));
-					ri.m_transform = glm::scale(ri.m_transform, vec3(0.1, 0.1, 0.1));
-					ri.VBO = boxId;
-					submitToLineRender(ri);
-				}
-			}
-		}
     }
     
+	void updateGrid(Solver& solver)
+	{
+		for (std::map<int, Cell>::iterator it = solver.m_mapCells.begin(); it != solver.m_mapCells.end(); ++it)
+		{
+			RenderItem ri;
+			ri.m_transform = mat4(1.0f);
+			vec3 pos(it->second.idx);
+			pos += vec3(0.5, 0.5, 0.5);
+			ri.m_transform = glm::translate(ri.m_transform, pos);
+			ri.m_transform = glm::scale(ri.m_transform, vec3(0.5, 0.5, 0.5));
+			ri.VBO = m_boxId;
+			submitToLineRender(ri);
+		}
+
+		{
+			RenderItem ri;
+			ri.m_transform = mat4(1.0f);
+			vec3 pos(solver.m_gridX / 2, solver.m_gridY / 2, solver.m_gridZ / 2);
+			ri.m_transform = glm::translate(ri.m_transform, pos);
+			ri.m_transform = glm::scale(ri.m_transform, pos);
+			ri.VBO = m_boxId;
+			submitToLineRender(ri);
+		}
+	}
+
     VBO addBox()
     {
         std::vector<vec3> vertices(8);
@@ -417,7 +429,8 @@ public:
     
     void renderLines()
     {
-        glm::mat4 viewMatrix = glm::lookAt(glm::vec3(0, 0, 4), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+        //glm::mat4 viewMatrix = glm::lookAt(glm::vec3(16, 0, 64), glm::vec3(16, 0, 0), glm::vec3(0, 1, 0));
+		glm::mat4 viewMatrix = glm::lookAt(glm::vec3(64, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
         glm::mat4 projectionMatrix = glm::perspectiveFov(45.0f, (m_with + 0.0f), m_height + 0.0f, 0.1f, 1000.0f);
         mat4 identity = mat4(1.0f);
         
@@ -465,6 +478,7 @@ public:
     
 private:
     int m_with, m_height;
+	int m_boxId;
     float m_rotationAngle;
     
     std::map<int, VBO> m_idToVBO;
@@ -533,25 +547,21 @@ int main(void)
     }
     
     int resX = 32, resY = 32, resZ = 32;
-    float size = 0.5f/60 * 5;
     
     GLRender render;
     render.init(width, height);
     bool running = true;
     
-//    FluidSolver solver(128, 128, 128, 0.5f/60.0f * 5.0f);
+    Solver solver(32, 32, 32, 1.0f);
     
     while (!glfwWindowShouldClose(window))
     {
+		solver.simulate();
+
+		render.updateGrid(solver);
         render.render();
         
         glfwSwapBuffers(window);
-        
-        if (running) 
-        {
-            //solver.step(0.1);
-        }
-        
         glfwPollEvents();
     }
     
