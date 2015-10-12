@@ -11,7 +11,9 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <OpenGL/gl.h>
+#ifdef __APPLE__
+	#include <OpenGL/gl.h>
+#endif
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
@@ -164,6 +166,8 @@ public:
         glEnableVertexAttribArray(m_attribLinePosition);
         glVertexAttribPointer(m_attribLinePosition, 3, GL_FLOAT, GL_FALSE, sizeof(LineVertex), (GLvoid*) 0);
         
+		glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceMatrixVBO);
+
         for (int i = 0; i < 4; ++i)
         {
             glEnableVertexAttribArray(m_attribLineInstanceMatrix + i);
@@ -307,15 +311,22 @@ public:
         m_rotationAngle = 0.0f;
 
         int boxId = addBBox();
-        RenderItem ri;
-        
-        ri.m_transform = mat4(1.0f);
-        ri.m_transform = glm::translate(ri.m_transform, vec3(1, 1, 1));
-        ri.m_transform = glm::scale(ri.m_transform, vec3(0.1, 0.1, 0.1));
-        ri.VBO = boxId;
-        
-        submitToLineRender(ri);
-        
+
+		for (int i = 0; i < 10; ++i)
+		{
+			for (int j = 0; j < 10; ++j)
+			{
+				for (int k = 0; k < 10; ++k)
+				{
+					RenderItem ri;
+					ri.m_transform = mat4(1.0f);
+					ri.m_transform = glm::translate(ri.m_transform, vec3(i * 0.1, j * 0.1, k * 0.1));
+					ri.m_transform = glm::scale(ri.m_transform, vec3(0.1, 0.1, 0.1));
+					ri.VBO = boxId;
+					submitToLineRender(ri);
+				}
+			}
+		}
     }
     
     VBO addBox()
@@ -412,8 +423,8 @@ public:
         
         glUseProgram(m_lineShaderProgram);
         checkGlError("glUseProgram(m_lineShaderProgram);");
-        glUniformMatrix4fv(m_uniformLineProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-        glUniformMatrix4fv(m_uniformLineView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		glUniformMatrix4fv(m_uniformLineProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		glUniformMatrix4fv(m_uniformLineView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
         
         vec4 color(1.0, 1.0, 1.0, 1.0);
         glUniform4fv(m_uniformColor, 1, value_ptr(color));
@@ -429,8 +440,7 @@ public:
             
             for (int i = 0; i < instances.size(); ++i)
             {
-                //buffInstanceMatrices[i] = instances[i].m_transform;
-                buffInstanceMatrices[i] = mat4(1.0f);
+                buffInstanceMatrices[i] = instances[i].m_transform;
             }
             glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceMatrixVBO);
             glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(mat4x4), &buffInstanceMatrices[0], GL_DYNAMIC_DRAW);

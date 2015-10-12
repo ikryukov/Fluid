@@ -11,10 +11,21 @@ include_directories (
 		../3rdparty/glm/include/
 		)
 
-set (LIBRARIES
+if (APPLE)
+	set (LIBRARIES
+			glfw3
+			glew
+	)
+endif (APPLE)
+
+if (WIN32)
+	set (LIBRARIES
 		glfw3
-		glew
- )
+		glew32
+		glu32
+		opengl32
+	)
+endif (WIN32)
 
 if (APPLE)
     find_package (OpenGL REQUIRED)
