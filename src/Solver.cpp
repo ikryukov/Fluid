@@ -14,6 +14,7 @@
 Solver::Solver(int gridX, int gridY, int gridZ, float h)
 	: m_gridX(gridX), m_gridY(gridY), m_gridZ(gridZ), m_h(h)
 	, m_kCfl(1.0f)
+    , Gravity(vec3(0, -9.8f, 0))
 {
 	for (float x = 0.0f; x < 10.0f; x += 1.0f)
 	{
@@ -41,6 +42,7 @@ void Solver::simulate()
 	std::cout << "time step dt = " << dt << std::endl;;
 	dynamicGridUpdate();
     advanceVelocityField();
+    applyExternalForces(dt);
 }
 
 int Solver::getIdx(int x, int y, int z)
@@ -157,6 +159,19 @@ void Solver::advanceVelocityField()
         vec3 particle = traceParticle(pos, -0.5f);
         vec3 newU = getVelocity(particle);
         it->second.unew = newU;
+    }
+    for (std::map<int, Cell>::iterator it = m_mapCells.begin(); it != m_mapCells.end(); ++it)
+    {
+        it->second.u = it->second.unew;
+    }
+}
+
+void Solver::applyExternalForces(float dt)
+{
+    for (std::map<int, Cell>::iterator it = m_mapCells.begin(); it != m_mapCells.end(); ++it)
+    {
+        if (it->second.mType == Cell::tFluid)
+            it->second.u += dt * Gravity;
     }
 }
 

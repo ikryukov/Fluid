@@ -52,12 +52,14 @@ public:
 	float calculateCFL();
 	void dynamicGridUpdate();
     void advanceVelocityField();
+    void applyExternalForces(float dt);
 
 	// Spatial grid
 	std::map<int, Cell> m_mapCells;
 	int m_gridX, m_gridY, m_gridZ;
 
 private:
+    vec3 Gravity;
 	
 	std::vector<Marker> m_markers;
 	float m_h; // width of a grid cell
