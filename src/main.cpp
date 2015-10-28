@@ -137,6 +137,7 @@ struct VBO
 struct RenderItem
 {
     int VBO;
+    vec4 color;
     mat4x4 m_transform;
 };
 
@@ -180,6 +181,10 @@ public:
             checkGlError("glVertexAttribDivisor");
         }
         
+        glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceColorVBO);
+        glEnableVertexAttribArray(m_attribLineColor);
+        glVertexAttribPointer(m_attribLineColor, 4, GL_FLOAT, GL_FALSE, sizeof(vec4), (GLvoid*) (0));
+        glVertexAttribDivisor(m_attribLineColor, 1);
         glBindVertexArray(0);
         
         curr.m_verticesCount = (GLuint) indices.size();
@@ -289,6 +294,9 @@ public:
         m_attribLinePosition = glGetAttribLocation(m_lineShaderProgram, "Position");
         checkGlError("glGetAttribLocation Position");
         
+        m_attribLineColor = glGetAttribLocation(m_lineShaderProgram, "InstanceColor");
+        checkGlError("glGetAttribLocation Color");
+        
         m_attribLineInstanceMatrix = glGetAttribLocation(m_lineShaderProgram, "InstanceMatrix");
         checkGlError("glGetAttribLocation InstanceMatrix");
 
@@ -298,15 +306,19 @@ public:
         checkGlError("glBindBuffer");
         glBufferData(GL_ARRAY_BUFFER, INSTANCE_BUFFER_SIZE * sizeof(mat4x4), NULL, GL_DYNAMIC_DRAW);
         checkGlError("glBufferData");
-        
+
+        glGenBuffers(1, &m_buffInstanceColorVBO);
+        checkGlError("glGenBuffers");
+        glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceColorVBO);
+        checkGlError("glBindBuffer");
+        glBufferData(GL_ARRAY_BUFFER, INSTANCE_BUFFER_SIZE * sizeof(vec4), NULL, GL_DYNAMIC_DRAW);
+        checkGlError("glBufferData");
+
         // set uniforms
         m_uniformLineProjection = glGetUniformLocation(m_lineShaderProgram, "Projection");
         checkGlError("get uniform Line Projection");
         m_uniformLineView = glGetUniformLocation(m_lineShaderProgram, "View");
         checkGlError("get uniform View");
-        m_uniformLineColor = glGetUniformLocation(m_lineShaderProgram, "Color");
-        checkGlError("get uniform Color");
-        
         
         m_height = height;
         m_with = width;
@@ -327,6 +339,12 @@ public:
 			ri.m_transform = glm::translate(ri.m_transform, pos);
 			ri.m_transform = glm::scale(ri.m_transform, vec3(0.5, 0.5, 0.5));
 			ri.VBO = m_boxId;
+            ri.color = vec4(0, 0, 1, 1);
+            if (it->second.mType == Cell::tAir)
+                ri.color = vec4(1, 1, 1, 1);
+            else if (it->second.mType == Cell::tSolid)
+                ri.color = vec4(1, 0, 0, 1);
+            
 			submitToLineRender(ri);
 		}
 
@@ -337,6 +355,7 @@ public:
 			ri.m_transform = glm::translate(ri.m_transform, pos);
 			ri.m_transform = glm::scale(ri.m_transform, pos);
 			ri.VBO = m_boxId;
+            ri.color = vec4(1, 1, 1, 1);
 			submitToLineRender(ri);
 		}
 	}
@@ -429,10 +448,9 @@ public:
     
     void renderLines()
     {
-        //glm::mat4 viewMatrix = glm::lookAt(glm::vec3(16, 0, 64), glm::vec3(16, 0, 0), glm::vec3(0, 1, 0));
+//        glm::mat4 viewMatrix = glm::lookAt(glm::vec3(16, 0, 64), glm::vec3(16, 0, 0), glm::vec3(0, 1, 0));
 		glm::mat4 viewMatrix = glm::lookAt(glm::vec3(64, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
         glm::mat4 projectionMatrix = glm::perspectiveFov(45.0f, (m_with + 0.0f), m_height + 0.0f, 0.1f, 1000.0f);
-        mat4 identity = mat4(1.0f);
         
         glUseProgram(m_lineShaderProgram);
         checkGlError("glUseProgram(m_lineShaderProgram);");
@@ -447,6 +465,7 @@ public:
         {
             std::vector<RenderItem> instances = it->second;
             std::vector<mat4x4> buffInstanceMatrices(instances.size());
+            std::vector<vec4> buffColor(instances.size());
             
             VBO currVBO = m_idToVBO[it->first];
             glBindVertexArray(currVBO.m_VAO);
@@ -454,9 +473,14 @@ public:
             for (int i = 0; i < instances.size(); ++i)
             {
                 buffInstanceMatrices[i] = instances[i].m_transform;
+                buffColor[i] = instances[i].color;
             }
             glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceMatrixVBO);
             glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(mat4x4), &buffInstanceMatrices[0], GL_DYNAMIC_DRAW);
+            checkGlError("m_buffInstanceMatrixVBO");
+            glBindBuffer(GL_ARRAY_BUFFER, m_buffInstanceColorVBO);
+            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(vec4), &buffColor[0], GL_DYNAMIC_DRAW);
+            checkGlError("buffColor");
             glDrawArraysInstanced(GL_LINES, 0, currVBO.m_verticesCount, (GLsizei) instances.size());
             checkGlError("glDrawArraysInstanced");
             glBindVertexArray(0);
@@ -502,10 +526,11 @@ private:
     GLint m_attribPosition, m_attribNormal;
     
     // Line render pass attribs
-    GLint m_attribLinePosition, m_attribLineInstanceMatrix;
+    GLint m_attribLinePosition, m_attribLineInstanceMatrix, m_attribLineColor;
     // Line render pass uniforms
-    GLint m_uniformLineProjection, m_uniformLineView, m_uniformLineColor;
+    GLint m_uniformLineProjection, m_uniformLineView;
     GLuint m_buffInstanceMatrixVBO;
+    GLuint m_buffInstanceColorVBO;
     
 };
 
@@ -560,6 +585,7 @@ int main(void)
 
 		render.updateGrid(solver);
         render.render();
+        sleep(2);
         
         glfwSwapBuffers(window);
         glfwPollEvents();

@@ -18,9 +18,9 @@ Solver::Solver(int gridX, int gridY, int gridZ, float h)
 {
 	for (float x = 0.0f; x < 10.0f; x += 1.0f)
 	{
-		for (float y = 0.0f; y < 5.0f; y += 1.0f)
+		for (float y = 0.0f; y < 4.0f; y += 1.0f)
 		{
-			for (float z = 0.0f; z < 10.0f; z += 1.0f)
+			for (float z = 0.0f; z < 4.0f; z += 1.0f)
 			{
 				Marker p;
 				p.pos = vec3(x, y, z);
@@ -108,7 +108,7 @@ void Solver::dynamicGridUpdate()
 				for (int k = 0; k < 6; ++k)
 				{
 					Cell* pN = NULL;
-					ivec3 nIdx(C.idx.x + dx[i], C.idx.y + dy[i], C.idx.z + dz[i]);
+					ivec3 nIdx(C.idx.x + dx[k], C.idx.y + dy[k], C.idx.z + dz[k]);
 					bool isExist = getCell(nIdx, &pN);
 					if (isExist)
 					{
@@ -117,21 +117,22 @@ void Solver::dynamicGridUpdate()
 							pN->mType = Cell::tAir;
 							pN->mLayer = i;
 						}
-						else
-						{
-							Cell N;
-							N.mLayer = i;
-							if (isInsideSimulationBounds(nIdx))
-							{
-								N.mType = Cell::tAir;
-							}
-							else
-							{
-								N.mType = Cell::tSolid;
-							}
-							addCellToGrid(N, nIdx);
-						}
-					}
+                    }
+                    else
+                    {
+                        Cell N;
+                        N.mLayer = i;
+                        if (isInsideSimulationBounds(nIdx))
+                        {
+                            N.mType = Cell::tAir;
+                        }
+                        else
+                        {
+                            N.mType = Cell::tSolid;
+                        }
+                        addCellToGrid(N, nIdx);
+                    }
+					
 				}
 			}
 		}
