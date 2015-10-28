@@ -31,6 +31,8 @@ struct Cell
 		tLast
 	};
 	vec3 u;
+    vec3 unew;
+    vec3 pos;
 	ivec3 idx;
 	float p;
 	Type mType;
@@ -49,6 +51,7 @@ public:
 	
 	float calculateCFL();
 	void dynamicGridUpdate();
+    void advanceVelocityField();
 
 	// Spatial grid
 	std::map<int, Cell> m_mapCells;
@@ -65,10 +68,14 @@ private:
 
 	// Utils
 	bool getCell(ivec3 cellIdx, Cell** pCell); // true if cell exists
+    Cell& cell(int i, int j, int k);
 	bool isInsideSimulationBounds(ivec3 cellIdx);
 	int getIdx(int x, int y, int z);
-	void addCellToGrid(Cell c, ivec3 cellIdx);
+	void addCellToGrid(Cell& c, ivec3 cellIdx);
 	int hash(ivec3 v);
+    vec3 traceParticle(vec3 p, float t);
+    vec3 getVelocity(vec3 p);
+    float getInterpolatedValue(float x, float y, float z, int index);
 
 };
 

@@ -9,6 +9,7 @@
 #include "Solver.h"
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 Solver::Solver(int gridX, int gridY, int gridZ, float h)
 	: m_gridX(gridX), m_gridY(gridY), m_gridZ(gridZ), m_h(h)
@@ -39,6 +40,7 @@ void Solver::simulate()
 	float dt = calculateCFL();
 	std::cout << "time step dt = " << dt << std::endl;;
 	dynamicGridUpdate();
+    advanceVelocityField();
 }
 
 int Solver::getIdx(int x, int y, int z)
@@ -147,6 +149,17 @@ void Solver::dynamicGridUpdate()
 	}
 }
 
+void Solver::advanceVelocityField()
+{
+    for (std::map<int, Cell>::iterator it = m_mapCells.begin(); it != m_mapCells.end(); ++it)
+    {
+        vec3 pos = it->second.pos;
+        vec3 particle = traceParticle(pos, -0.5f);
+        vec3 newU = getVelocity(particle);
+        it->second.unew = newU;
+    }
+}
+
 int Solver::hash(ivec3 v)
 {
 	int r = 541 * v.x + 79 * v.y + 31 * v.z;
@@ -167,6 +180,14 @@ bool Solver::getCell(ivec3 cellIdx, Cell** pCell)
 	}
 }
 
+Cell& Solver::cell(int i, int j, int k)
+{
+    ivec3 idx(i, j, k);
+    int hk = hash(idx);
+    // TODO: check existance
+    return m_mapCells[hk];
+}
+
 bool Solver::isInsideSimulationBounds(ivec3 cellIdx)
 {
 	return cellIdx.x >= 0 && cellIdx.x < m_gridX &&
@@ -174,9 +195,35 @@ bool Solver::isInsideSimulationBounds(ivec3 cellIdx)
 		cellIdx.z >= 0 && cellIdx.z < m_gridZ;
 }
 
-void Solver::addCellToGrid(Cell c, ivec3 cellIdx)
+void Solver::addCellToGrid(Cell& c, ivec3 cellIdx)
 {
 	int hk = hash(cellIdx);
 	c.idx = cellIdx;
+    c.pos = vec3(cellIdx.x * m_h, cellIdx.y * m_h, cellIdx.z * m_h);
 	m_mapCells[hk] = c;
+}
+
+vec3 Solver::getVelocity(vec3 p)
+{
+    vec3 v;
+    v.x = getInterpolatedValue(p.x / m_h, p.y / m_h - 0.5f, p.z / m_h - 0.5f, 0);
+    v.y = getInterpolatedValue(p.x / m_h - 0.5f, p.y / m_h, p.z / m_h - 0.5f, 1);
+    v.z = getInterpolatedValue(p.x / m_h - 0.5f, p.y / m_h - 0.5f, p.z / m_h, 2);
+    return v;
+}
+
+float Solver::getInterpolatedValue(float x, float y, float z, int index)
+{
+    int i = floor(x);
+    int j = floor(y);
+    int k = floor(z);
+    return (i+1-x) * (j+1-y) * (k+1-z) * cell(i, j, k).u[index] +
+    (x-i) * (j+1-y) * (k+1-z) * cell(i+1, j, k).u[index] + (i+1-x) * (y-j) * (k+1-z) * cell(i, j+1, k).u[index] + (x-i) * (y-j) * (k+1-z) * cell(i+1, j+1, k).u[index] + (i+1-x) * (j+1-y) * (z-k) * cell(i, j, k+1).u[index] + (x-i) * (j+1-y) * (z-k) * cell(i+1, j, k+1).u[index] + (i+1-x) * (y-j) * (z-k) * cell(i, j+1, k+1).u[index] + (x-i) * (y-j) * (z-k) * cell(i+1, j+1, k+1).u[index];
+}
+
+vec3 Solver::traceParticle(vec3 p, float t)
+{
+    vec3 v = getVelocity(p);
+    v = getVelocity(p + 0.5f * t * v);
+    return p + t * v;
 }
