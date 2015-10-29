@@ -34,7 +34,8 @@ struct Cell
     vec3 unew;
     vec3 pos;
 	ivec3 idx;
-	float p;
+	float p; // pressure
+	float ro; // density
 	Type mType;
 	int mLayer;
 };
@@ -53,6 +54,7 @@ public:
 	void dynamicGridUpdate();
     void advanceVelocityField();
     void applyExternalForces(float dt);
+	void calculatePressure(float dt);
 
 	// Spatial grid
 	std::map<int, Cell> m_mapCells;
@@ -64,6 +66,7 @@ private:
 	std::vector<Marker> m_markers;
 	float m_h; // width of a grid cell
 	float m_kCfl;
+	float m_pAtm;
 
 	std::vector<Cell*> m_fluidCells;
 	std::vector<Cell*> m_airCells;

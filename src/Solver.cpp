@@ -10,11 +10,15 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <vector>
+
+using namespace std;
 
 Solver::Solver(int gridX, int gridY, int gridZ, float h)
 	: m_gridX(gridX), m_gridY(gridY), m_gridZ(gridZ), m_h(h)
 	, m_kCfl(1.0f)
-    , Gravity(vec3(0, -9.8f, 0))
+	, Gravity(vec3(0, -9.8f, 0))
+	, m_pAtm(1.0f)
 {
 	for (float x = 0.0f; x < 10.0f; x += 1.0f)
 	{
@@ -174,6 +178,44 @@ void Solver::applyExternalForces(float dt)
         if (it->second.mType == Cell::tFluid)
             it->second.u += dt * Gravity;
     }
+}
+
+void Solver::calculatePressure(float dt)
+{
+	std::vector<int> A;
+	std::vector<int> ind;
+	std::vector<float> B;
+
+	for (std::map<int, Cell>::iterator it = m_mapCells.begin(); it != m_mapCells.end(); ++it)
+	{
+		Cell& c = it->second;
+		if (c.mType == Cell::tFluid)
+		{
+			int ki = 0;
+			
+			int dx[6] = { 1, -1, 0, 0, 0, 0 };
+			int dy[6] = { 0, 0, 1, -1, 0, 0 };
+			int dz[6] = { 0, 0, 0, 0, 1, -1 };
+			for (int k = 0; k < 6; ++k)
+			{
+				Cell* pN = NULL;
+				ivec3 nIdx(c.idx.x + dx[k], c.idx.y + dy[k], c.idx.z + dz[k]);
+				bool isExist = getCell(nIdx, &pN);
+				if (isExist)
+				{
+					if (pN->mType == Cell::tAir)
+					{
+						++ki;
+					}
+				}
+			}
+
+			float divU = 0.0f;
+			float b = c.ro * m_h / dt * divU - ki * m_pAtm;
+			B.push_back(b);
+		}		
+	}
+
 }
 
 int Solver::hash(ivec3 v)

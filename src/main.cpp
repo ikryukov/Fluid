@@ -585,7 +585,6 @@ int main(void)
 
 		render.updateGrid(solver);
         render.render();
-        sleep(2);
         
         glfwSwapBuffers(window);
         glfwPollEvents();
