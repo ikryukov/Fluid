@@ -50,6 +50,7 @@ std::string loadShaderFromFile(std::string &filename)
     if (m_stream.fail())
     {
         printf("unable to open file\n");
+        assert(0);
         return out;
     }
     while(std::getline(m_stream, line, '\n'))
@@ -234,43 +235,44 @@ public:
     
     void init(int width, int height)
     {
-        glGenRenderbuffers(1, &m_colorRenderbuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_colorRenderbuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
-        checkGlError("color buffer");
-        glGenRenderbuffers(1, &m_depthRenderbuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_depthRenderbuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
-        checkGlError("depth buffer");
-        glGenFramebuffers(1, &m_framebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
+//        glGenRenderbuffers(1, &m_colorRenderbuffer);
+//        glBindRenderbuffer(GL_RENDERBUFFER, m_colorRenderbuffer);
+//        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+//        checkGlError("color buffer");
+//        glGenRenderbuffers(1, &m_depthRenderbuffer);
+//        glBindRenderbuffer(GL_RENDERBUFFER, m_depthRenderbuffer);
+//        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+//        checkGlError("depth buffer");
+//        glGenFramebuffers(1, &m_framebuffer);
+//        glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
         //	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorbufferTexture, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_colorRenderbuffer);
-        checkGlError("GL_COLOR_ATTACHMENT0");
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthRenderbuffer);
-        checkGlError("GL_DEPTH_ATTACHMENT");
-        glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        checkGlError("frame buffer");
+//        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_colorRenderbuffer);
+//        checkGlError("GL_COLOR_ATTACHMENT0");
+//        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthRenderbuffer);
+//        checkGlError("GL_DEPTH_ATTACHMENT");
+//        glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
+//        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//        checkGlError("frame buffer");
         
         glViewport(0, 0, width, height);
-        
+        checkGlError("glViewport");
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
+        checkGlError("glCullFace");
         
-        std::string shaderPath = std::string("Simple.vert");
+        std::string shaderPath = std::string("../../../src/Simple.vert");
         std::string vertexShaderSource = loadShaderFromFile(shaderPath);
-        shaderPath = std::string("Simple.frag");
+        shaderPath = std::string("../../../src/Simple.frag");
         std::string fragmentShaderSource = loadShaderFromFile(shaderPath);
         
         m_shaderProgram = BuildProgram(vertexShaderSource.c_str(),
                                        fragmentShaderSource.c_str());
         checkGlError("program");
         
-        shaderPath = std::string("Line.vert");
+        shaderPath = std::string("../../../src/Line.vert");
         vertexShaderSource = loadShaderFromFile(shaderPath);
-        shaderPath = std::string("Line.frag");
+        shaderPath = std::string("../../../src/Line.frag");
         fragmentShaderSource = loadShaderFromFile(shaderPath);
         
         m_lineShaderProgram = BuildProgram(vertexShaderSource.c_str(), fragmentShaderSource.c_str());
@@ -430,7 +432,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkGlError("glClear");
 
-//        renderSolid();
+        renderSolid();
         renderLines();
     }
     
@@ -456,9 +458,10 @@ public:
         checkGlError("glUseProgram(m_lineShaderProgram);");
 		glUniformMatrix4fv(m_uniformLineProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 		glUniformMatrix4fv(m_uniformLineView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-        
-        vec4 color(1.0, 1.0, 1.0, 1.0);
-        glUniform4fv(m_uniformColor, 1, value_ptr(color));
+        checkGlError("glUniformMatrix4fv");
+//        vec4 color(1.0, 1.0, 1.0, 1.0);
+//        glUniform4fv(m_uniformColor, 1, value_ptr(color));
+//        checkGlError("glUniform4fv");
 
         
         for (std::map<int, std::vector<RenderItem> >::iterator it = m_renderLineQueue.begin(); it != m_renderLineQueue.end(); ++it)
@@ -469,6 +472,7 @@ public:
             
             VBO currVBO = m_idToVBO[it->first];
             glBindVertexArray(currVBO.m_VAO);
+            checkGlError("glBindVertexArray");
             
             for (int i = 0; i < instances.size(); ++i)
             {
